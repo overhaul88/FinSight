@@ -1,6 +1,6 @@
 # FinSight
 
-FinSight is a production-oriented Retrieval-Augmented Generation system for Indian financial regulatory documents. The target scope is defined in [FinSight_Tutorial.md](./FinSight_Tutorial.md): ingest RBI/SEBI PDFs, chunk and embed them, retrieve relevant passages with reranking, optionally fine-tune a local instruct model with QLoRA, evaluate with Ragas, and serve answers through FastAPI.
+FinSight is a production-oriented Retrieval-Augmented Generation system for Indian financial regulatory documents. The target scope is defined as: ingest RBI/SEBI PDFs, chunk and embed them, retrieve relevant passages with reranking, optionally fine-tune a local instruct model with QLoRA, evaluate with Ragas, and serve answers through FastAPI.
 
 ## Scope
 
