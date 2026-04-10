@@ -1,0 +1,21 @@
+1. DEFINITIONS
+
+For the purposes of this circular, the following terms shall have the meanings
+ascribed to them under the applicable Reserve Bank of India framework.
+
+1.1 "Regulated Entity" means any bank, NBFC, or payment institution regulated
+by the Reserve Bank of India under the applicable Acts.
+
+1.2 "KYC" means Know Your Customer, which requires verification of customer
+identity before opening an account or creating a lending relationship.
+
+2. APPLICABILITY
+
+These directions apply to all regulated entities that issue savings accounts,
+credit products, or payment instruments within India.
+
+3. CUSTOMER IDENTIFICATION
+
+Entities must obtain proof of identity and proof of address before account
+activation unless a permitted simplified due diligence exception applies.
+

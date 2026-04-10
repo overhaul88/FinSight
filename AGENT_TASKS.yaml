@@ -1,0 +1,241 @@
+version: 1
+project: FinSight
+updated_at: "2026-04-09"
+execution_rules:
+  - Execute tasks in dependency order unless a task is explicitly marked parallelizable.
+  - Do not start a task until all stop conditions for its dependencies are met.
+  - After each task, run the listed validation commands and record results in the task notes.
+  - Prefer local, CPU-safe, deterministic validation before cloud integrations.
+  - Keep production-only integrations optional behind environment flags until the local path is stable.
+
+tasks:
+  - id: T01
+    name: Repository Backbone
+    status: completed
+    depends_on: []
+    parallelizable: false
+    objective: Create the baseline repository structure, execution spec, and configuration backbone.
+    deliverables:
+      - path: AGENT_TASKS.yaml
+        requirement: Ordered machine-readable execution plan with dependencies, deliverables, validations, and stop conditions.
+      - path: src/__init__.py
+        requirement: Root package marker.
+      - path: src/config.py
+        requirement: Centralized settings loader with environment defaults and optional .env loading.
+      - path: src/ingestion/__init__.py
+        requirement: Public exports for ingestion primitives.
+      - path: src/retrieval/__init__.py
+        requirement: Package marker for retrieval layer.
+      - path: src/llm/__init__.py
+        requirement: Package marker for model layer.
+      - path: src/evaluation/__init__.py
+        requirement: Package marker for evaluation layer.
+      - path: src/serving/__init__.py
+        requirement: Package marker for serving layer.
+      - path: requirements.txt
+        requirement: Initial dependency manifest aligned with tutorial scope.
+      - path: .env.example
+        requirement: Safe sample environment variables for local development.
+      - path: .gitignore
+        requirement: Ignore caches, models, data artifacts, and environment files.
+      - path: README.md
+        requirement: Initial project overview and execution entry points.
+    validation:
+      - command: python3 -m compileall src
+      - command: python3 -c "from src.config import settings; print(settings.environment)"
+    stop_conditions:
+      - All listed files exist.
+      - The src package imports without syntax errors.
+      - Settings load with defaults when .env is absent.
+
+  - id: T02
+    name: Ingestion Core
+    status: completed
+    depends_on: [T01]
+    parallelizable: false
+    objective: Implement document loading, chunking, and ingestion orchestration for a local offline corpus.
+    deliverables:
+      - path: src/ingestion/loader.py
+        requirement: Load PDFs and text fixtures, classify documents, and attach page-level metadata.
+      - path: src/ingestion/chunker.py
+        requirement: Recursive and section-aware chunking with stable chunk IDs and strategy selection.
+      - path: src/ingestion/embedder.py
+        requirement: Embedding wrapper plus local FAISS index build, persist, load, and search.
+      - path: scripts/ingest.py
+        requirement: CLI pipeline for load -> chunk -> embed -> persist with optional MLflow logging.
+      - path: data/processed/.gitkeep
+        requirement: Output directory retained in repository.
+      - path: tests/fixtures/sample_rbi_guideline.txt
+        requirement: Stable text fixture for offline ingestion tests.
+      - path: tests/test_ingestion.py
+        requirement: Unit coverage for loader, chunker, strategy selection, and chunk IDs.
+    validation:
+      - command: python3 -m compileall src scripts tests
+      - command: pytest tests/test_ingestion.py -q
+    stop_conditions:
+      - Text fixtures can be loaded without external services.
+      - Chunking preserves section metadata for structured regulatory text.
+      - Ingestion CLI parses and reaches the vector-store phase when dependencies are installed.
+
+  - id: T03
+    name: Retrieval Baseline
+    status: completed
+    depends_on: [T02]
+    parallelizable: false
+    objective: Build a local retrieval path on top of the FAISS index before introducing cloud stores.
+    deliverables:
+      - path: src/retrieval/vector_store.py
+        requirement: Base retrieval interface plus FAISS-backed implementation.
+      - path: src/retrieval/retriever.py
+        requirement: Query expansion fallback, deduplication, and cross-encoder reranking.
+      - path: tests/test_retriever.py
+        requirement: Retrieval behavior tests using mocked embeddings or a deterministic miniature index.
+    validation:
+      - command: pytest tests/test_retriever.py -q
+    stop_conditions:
+      - A query returns ranked source chunks from the local index.
+      - Retrieval works without Pinecone configured.
+
+
+  - id: T04
+    name: Model And Chain
+    status: completed
+    depends_on: [T03]
+    parallelizable: false
+    objective: Assemble the RAG chain with a model abstraction that supports local and development fallback modes.
+    deliverables:
+      - path: src/llm/model.py
+        requirement: Base model loader, optional adapter loading, and development fallback path.
+      - path: src/retrieval/chain.py
+        requirement: Prompting, context formatting, synchronous invoke, and async streaming.
+      - path: tests/test_chain.py
+        requirement: Deterministic tests for prompt assembly, source formatting, and streaming behavior.
+    validation:
+      - command: python3 -m compileall src tests
+      - command: pytest tests/test_chain.py -q
+    stop_conditions:
+      - The chain can format retrieved context and produce an answer object with sources.
+      - The model layer can fail gracefully when local model assets are unavailable.
+
+  - id: T05
+    name: Evaluation And Tracking
+    status: completed
+    depends_on: [T04]
+    parallelizable: true
+    objective: Add measurable evaluation and experiment tracking.
+    deliverables:
+      - path: data/eval/qa_pairs.json
+        requirement: Seed evaluation set for grounded Q&A checks.
+      - path: src/evaluation/ragas_eval.py
+        requirement: Build and run RAG evaluation datasets with optional external judge models.
+      - path: src/evaluation/mlflow_tracker.py
+        requirement: MLflow logging wrapper with threshold reporting.
+      - path: scripts/evaluate.py
+        requirement: CLI entry point for evaluation runs.
+    validation:
+      - command: python3 -m compileall src scripts tests
+      - command: pytest tests/test_evaluation.py -q
+    stop_conditions:
+      - Evaluation can run in a dry mode locally.
+      - Metrics logging is optional and does not break local evaluation.
+
+  - id: T06
+    name: Fine-Tuning Pipeline
+    status: completed
+    depends_on: [T05]
+    parallelizable: true
+    objective: Add dataset generation and QLoRA training scripts after the baseline RAG path is stable.
+    deliverables:
+      - path: data/finetune/.gitkeep
+        requirement: Fine-tune dataset directory retained in repository.
+      - path: data/eval/create_finetune_data.py
+        requirement: Deterministic dataset generation script for instruction pairs.
+      - path: src/llm/finetune.py
+        requirement: QLoRA training entry point with adapter persistence.
+      - path: scripts/finetune.py
+        requirement: CLI wrapper for training execution.
+      - path: tests/test_finetune.py
+        requirement: Deterministic tests for dataset generation and dry-run training contracts.
+    validation:
+      - command: python3 -m compileall src scripts data/eval
+      - command: pytest tests/test_finetune.py -q
+    stop_conditions:
+      - Training code is isolated from the serving path.
+      - Adapter artifacts have a defined output contract.
+
+  - id: T07
+    name: API Surface
+    status: completed
+    depends_on: [T04]
+    parallelizable: false
+    objective: Expose the RAG system through a typed FastAPI service.
+    deliverables:
+      - path: src/serving/schemas.py
+        requirement: Request and response models with validation bounds.
+      - path: src/serving/api.py
+        requirement: Startup lifecycle, health endpoint, query endpoint, and SSE stream endpoint.
+      - path: tests/test_api.py
+        requirement: Integration tests for root, health, validation, and readiness behavior.
+    validation:
+      - command: pytest tests/test_api.py -q
+    stop_conditions:
+      - The API can start without blocking the event loop on import.
+      - `/health` works before full model readiness.
+
+  - id: T08
+    name: Packaging And Local Ops
+    status: completed
+    depends_on: [T02, T07]
+    parallelizable: true
+    objective: Make the service reproducible locally with containers and consistent runtime commands.
+    deliverables:
+      - path: Dockerfile
+        requirement: Multi-stage build for API runtime.
+      - path: docker-compose.yml
+        requirement: API plus MLflow stack with an optional ingestion profile.
+      - path: .dockerignore
+        requirement: Exclude caches, local venvs, models, and test artifacts from builds.
+    validation:
+      - command: docker compose config
+    stop_conditions:
+      - Compose renders successfully.
+      - Runtime image includes only required artifacts.
+
+  - id: T09
+    name: Deployment And Automation
+    status: completed
+    depends_on: [T08]
+    parallelizable: true
+    objective: Prepare cloud deployment and CI/CD automation after the local container path is stable.
+    deliverables:
+      - path: .github/workflows/deploy.yml
+        requirement: Basic deployment workflow for EC2 pull-and-restart.
+      - path: scripts/run_on_ec2.sh
+        requirement: Idempotent bootstrap script for EC2 setup.
+    validation:
+      - command: python3 -m compileall scripts
+    stop_conditions:
+      - Deployment docs and scripts agree on ports, environment variables, and startup commands.
+
+
+  - id: T10
+    name: Final Verification And Documentation
+    status: completed
+    depends_on: [T05, T06, T07, T08, T09]
+    parallelizable: false
+    objective: Close gaps, tighten docs, and confirm the repository is usable by a new engineer.
+    deliverables:
+      - path: README.md
+        requirement: Updated quickstart, architecture, evaluation summary, and deployment notes.
+      - path: Makefile
+        requirement: Common local commands for validation, doctor checks, dataset generation, dry-run fine-tuning, and API startup.
+      - path: scripts/doctor.py
+        requirement: Environment and asset diagnostics for first-run troubleshooting.
+      - path: FinSight_Tutorial.md
+        requirement: Remains unchanged as source tutorial reference unless explicitly requested.
+    validation:
+      - command: pytest -q
+      - command: python3 scripts/doctor.py --json
+    stop_conditions:
+      - README reflects actual repository state rather than tutorial-only intent.
+      - Remaining blockers are documented explicitly.

@@ -1,0 +1,18 @@
+[
+  {
+    "question": "What is the maximum LTV ratio for gold loans under RBI guidelines?",
+    "ground_truth": "The maximum Loan-to-Value ratio for loans against gold jewellery is 75 percent under RBI gold loan guidance.",
+    "contexts": []
+  },
+  {
+    "question": "What KYC documents are required for opening a savings bank account?",
+    "ground_truth": "Proof of identity and proof of address are required under RBI KYC guidance.",
+    "contexts": []
+  },
+  {
+    "question": "What penalties apply for insider trading violations under SEBI rules?",
+    "ground_truth": "SEBI may impose civil penalties, criminal exposure, and market access restrictions for insider trading violations.",
+    "contexts": []
+  }
+]
+
